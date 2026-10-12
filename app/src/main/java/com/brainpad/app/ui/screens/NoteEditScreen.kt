@@ -26,17 +26,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteEditScreen(
+    noteId: String,
     initialTitle: String,
     initialContent: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onShareClick: () -> Unit
 ) {
 
-    var title by rememberSaveable { mutableStateOf(initialTitle) }
-    var content by rememberSaveable { mutableStateOf(initialContent) }
+    var title by rememberSaveable(noteId){ mutableStateOf(initialTitle) }
+    var content by rememberSaveable(noteId) { mutableStateOf(initialContent) }
 
     Scaffold(
         topBar = {
@@ -47,6 +50,14 @@ fun NoteEditScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Назад"
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onShareClick) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Поделиться"
                         )
                     }
                 }
