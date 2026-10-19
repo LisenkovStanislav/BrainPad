@@ -13,8 +13,8 @@ import com.brainpad.app.ui.screens.NotesListScreen
 import com.brainpad.app.viewmodel.NotesView
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import com.brainpad.app.ui.screens.NoteEditScreen
+import com.brainpad.app.ui.screens.NoteNotFoundScreen
 import com.brainpad.app.ui.theme.BrainPadTheme
 
 class MainActivity : ComponentActivity() {
@@ -25,13 +25,15 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: NotesView by viewModels()
 
-    private var activeNoteIdState = mutableStateOf<String?>(null)
-    private var isEditingState = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate")
+
         enableEdgeToEdge()
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
 
         if (savedInstanceState == null) {
             handleDeepLink(intent)
@@ -40,36 +42,51 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             val listNotes by viewModel.notes.collectAsState()
-
             val activeNoteId by viewModel.activeNoteId.collectAsState()
             val isEditing by viewModel.isEditing.collectAsState()
+            val notFoundNoteId by viewModel.notFoundNoteId.collectAsState()
 
-            if (isEditing) {
-                val currentNote = activeNoteId?.let { viewModel.getNoteById(it) }
-
-                BrainPadTheme() {
-                    NoteEditScreen(
-                        noteId = activeNoteId ?: "",
-                        initialTitle = currentNote?.title.orEmpty(),
-                        initialContent = currentNote?.content.orEmpty(),
-                        onBackClick = {
-                            viewModel.closeNote()
-                        },
-                        onShareClick = {
-                            currentNote?.let { note ->
-                                shareNote(note.id)
+            when {
+                notFoundNoteId != null -> {
+                    BrainPadTheme() {
+                        NoteNotFoundScreen(
+                            noteId = notFoundNoteId!!,
+                            onBackToAllNotesClick = {
+                                viewModel.clearNotFoundError()
                             }
-                        }
-                    )
+                        )
+                    }
                 }
-            } else {
-                BrainPadTheme() {
-                    NotesListScreen(
-                        notes = listNotes,
-                        onNoteClick = { noteId ->
-                            viewModel.openNote(noteId)
-                        }
-                    )
+
+                isEditing -> {
+                    val currentNote = activeNoteId?.let { viewModel.getNoteById(it) }
+
+                    BrainPadTheme() {
+                        NoteEditScreen(
+                            noteId = activeNoteId ?: "",
+                            initialTitle = currentNote?.title.orEmpty(),
+                            initialContent = currentNote?.content.orEmpty(),
+                            onBackClick = {
+                                viewModel.closeNote()
+                            },
+                            onShareClick = {
+                                currentNote?.let { note ->
+                                    shareNote(note.id)
+                                }
+                            }
+                        )
+                    }
+                }
+
+                else -> {
+                    BrainPadTheme() {
+                        NotesListScreen(
+                            notes = listNotes,
+                            onNoteClick = { noteId ->
+                                viewModel.openNote(noteId)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -86,20 +103,32 @@ class MainActivity : ComponentActivity() {
         val data: Uri? = intent?.data ?: return
 
         if (data!!.scheme == "brainpad") {
+
+            if (data.pathSegments.size != 1) {
+                showErrorToast(getString(R.string.error_invalid_path))
+                return
+            }
+
             val requestedId = data.lastPathSegment
-                ?: data.pathSegments.firstOrNull()
-                ?: (if (data.host != "note") data.host else null)
+
+
+            if (data.host != "note") {
+                showErrorToast(getString(R.string.error_invalid_host))
+                return
+            }
 
             if (requestedId.isNullOrBlank()) {
-                showErrorToast("Ошибка: ссылка повреждена (ID не указан)")
+                showErrorToast(getString(R.string.error_empty_id))
                 return
             }
 
             val note = viewModel.getNoteById(requestedId)
             if (note != null) {
+                viewModel.clearNotFoundError()
                 viewModel.openNote(note.id)
             } else {
-                showErrorToast("Заметка с ID '$requestedId' не найдена!")
+                viewModel.closeNote()
+                viewModel.showNotFoundError(requestedId)
             }
         }
     }
@@ -111,7 +140,7 @@ class MainActivity : ComponentActivity() {
             putExtra(Intent.EXTRA_TEXT, deepLinkUrl)
             type = "text/plain"
         }
-        val shareIntent = Intent.createChooser(sendIntent, "Поделиться заметкой")
+        val shareIntent = Intent.createChooser(sendIntent, getString(R.string.share_chooser_title))
         startActivity(shareIntent)
     }
 

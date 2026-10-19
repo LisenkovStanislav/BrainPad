@@ -26,10 +26,22 @@ class NotesView : ViewModel() {
         )
     )
 
+//    private val _notes = MutableStateFlow<List<Note>>(listOf())
+
     val notes: StateFlow<List<Note>> = _notes.asStateFlow()
 
     val activeNoteId = MutableStateFlow<String?>(null)
     val isEditing = MutableStateFlow(false)
+    val notFoundNoteId = MutableStateFlow<String?>(null)
+
+    fun showNotFoundError(id: String) {
+        closeNote()
+        notFoundNoteId.value = id
+    }
+
+    fun clearNotFoundError() {
+        notFoundNoteId.value = null
+    }
 
     fun openNote(id: String) {
         activeNoteId.value = id

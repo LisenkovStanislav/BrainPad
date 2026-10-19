@@ -1,0 +1,39 @@
+<resources>
+    <string name="app_name">BrainPad</string>
+    <string name="your_notes">Ваши заметки</string>
+    <string name="no_name">Без названия</string>
+
+    <!-- Empty State -->
+    <string name="no_notes_title">Заметок пока нет</string>
+    <string name="no_notes_subtitle">Нажмите + или иконку микрофона, чтобы создать первую заметку</string>
+    <string name="create_note">Создать заметку</string>
+
+    <!-- Loading State -->
+    <string name="loading_notes">Загрузка заметок…</string>
+
+    <!-- Error State -->
+    <string name="note_not_found_title">Заметка не найдена</string>
+    <string name="note_not_found_message">Заметка, которую вы пытаетесь открыть по ссылке, не существует или была удалена (ID: #%1$s).</string>
+    <string name="back_to_all_notes">Ко всем заметкам</string>
+
+    <!-- Edit Screen -->
+    <string name="new_note_title">Новая заметка</string>
+    <string name="edit_note_title">Редактирование</string>
+    <string name="title_placeholder">Заголовок</string>
+    <string name="content_placeholder">Текст заметки…</string>
+
+    <!-- Content Descriptions (TalkBack Accessibility) -->
+    <string name="cd_search">Поиск заметок</string>
+    <string name="cd_settings">Настройки</string>
+    <string name="cd_sort">Сортировка заметок</string>
+    <string name="cd_record_voice">Записать голосовую заметку</string>
+    <string name="cd_add_note">Добавить заметку</string>
+    <string name="cd_back">Назад</string>
+    <string name="cd_share">Поделиться заметкой</string>
+
+    <!-- Intents & Errors -->
+    <string name="share_chooser_title">Поделиться заметкой</string>
+    <string name="error_invalid_path">Ошибка: неверное количество параметров пути</string>
+    <string name="error_invalid_host">Ошибка: ссылка повреждена (неправильный хост)</string>
+    <string name="error_empty_id">Ошибка: ссылка повреждена (ID не указан)</string>
+</resources>
