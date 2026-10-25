@@ -9,12 +9,29 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material3.Button
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
 import com.brainpad.app.ui.screens.NotesListScreen
 import com.brainpad.app.viewmodel.NotesView
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import com.brainpad.app.ui.screens.NoteEditScreen
 import com.brainpad.app.ui.screens.NoteNotFoundScreen
+import com.brainpad.app.ui.theme.AppSizes
+import com.brainpad.app.ui.theme.AppSpacing
 import com.brainpad.app.ui.theme.BrainPadTheme
 
 class MainActivity : ComponentActivity() {
@@ -46,45 +63,72 @@ class MainActivity : ComponentActivity() {
             val isEditing by viewModel.isEditing.collectAsState()
             val notFoundNoteId by viewModel.notFoundNoteId.collectAsState()
 
-            when {
-                notFoundNoteId != null -> {
-                    BrainPadTheme() {
-                        NoteNotFoundScreen(
-                            noteId = notFoundNoteId!!,
-                            onBackToAllNotesClick = {
-                                viewModel.clearNotFoundError()
+            var isGreenColorScheme by rememberSaveable() { mutableStateOf(false) }
+
+
+            BrainPadTheme(
+                isGreenColorScheme = isGreenColorScheme
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+
+                    when {
+                        notFoundNoteId != null -> {
+                            BrainPadTheme(isGreenColorScheme = isGreenColorScheme) {
+                                NoteNotFoundScreen(
+                                    noteId = notFoundNoteId!!,
+                                    onBackToAllNotesClick = {
+                                        viewModel.clearNotFoundError()
+                                    }
+                                )
                             }
-                        )
+                        }
+
+                        isEditing -> {
+                            val currentNote = activeNoteId?.let { viewModel.getNoteById(it) }
+
+                            BrainPadTheme(isGreenColorScheme = isGreenColorScheme) {
+                                NoteEditScreen(
+                                    noteId = activeNoteId ?: "",
+                                    initialTitle = currentNote?.title.orEmpty(),
+                                    initialContent = currentNote?.content.orEmpty(),
+                                    onBackClick = {
+                                        viewModel.closeNote()
+                                    },
+                                    onShareClick = {
+                                        currentNote?.let { note ->
+                                            shareNote(note.id)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+
+                        else -> {
+                            BrainPadTheme(isGreenColorScheme = isGreenColorScheme) {
+                                NotesListScreen(
+                                    notes = listNotes,
+                                    onNoteClick = { noteId ->
+                                        viewModel.openNote(noteId)
+                                    }
+                                )
+                            }
+                        }
                     }
-                }
 
-                isEditing -> {
-                    val currentNote = activeNoteId?.let { viewModel.getNoteById(it) }
 
-                    BrainPadTheme() {
-                        NoteEditScreen(
-                            noteId = activeNoteId ?: "",
-                            initialTitle = currentNote?.title.orEmpty(),
-                            initialContent = currentNote?.content.orEmpty(),
-                            onBackClick = {
-                                viewModel.closeNote()
-                            },
-                            onShareClick = {
-                                currentNote?.let { note ->
-                                    shareNote(note.id)
-                                }
-                            }
-                        )
-                    }
-                }
+                    FloatingActionButton(
+                        onClick = { isGreenColorScheme = !isGreenColorScheme },
+                        modifier = Modifier
+                            .padding(AppSpacing.screenPadding)
+                            .size(AppSizes.fabSmallSize)
+                            .align(androidx.compose.ui.Alignment.BottomStart)
 
-                else -> {
-                    BrainPadTheme() {
-                        NotesListScreen(
-                            notes = listNotes,
-                            onNoteClick = { noteId ->
-                                viewModel.openNote(noteId)
-                            }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Build,
+                            contentDescription = "Change color"
                         )
                     }
                 }
