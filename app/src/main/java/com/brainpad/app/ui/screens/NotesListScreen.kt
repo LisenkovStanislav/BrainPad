@@ -59,8 +59,8 @@ fun NotesListScreen(
                     }
                     IconButton(onClick = { /*TODO*/ }) {
                         Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.cd_settings)
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = stringResource(R.string.cd_sort)
                         )
                     }
                 },
@@ -90,8 +90,8 @@ fun NotesListScreen(
                     FloatingActionButton(
                         onClick = { /*TODO*/ },
                         modifier = Modifier.size(AppSizes.fabPrimarySize),
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = AppShapes.fabPrimary
                     ) {
                         Icon(
@@ -117,7 +117,6 @@ fun NotesListScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
                         .padding(horizontal = AppSpacing.emptyScreenHorizontal),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
@@ -261,25 +260,6 @@ fun NotesListScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(AppSpacing.xl)
                 ) {
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.your_notes),
-                                style = MaterialTheme.typography.headlineSmall,
-                            )
-                            IconButton(onClick = { /* сортировка */ }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Sort,
-                                    contentDescription = stringResource(R.string.cd_sort),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
                     items(
                         count = notes.size,
                         key = { index -> notes[index].id }
