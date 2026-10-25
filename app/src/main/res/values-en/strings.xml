@@ -1,0 +1,39 @@
+<resources>
+    <string name="app_name">BrainPad</string>
+    <string name="your_notes">Your notes</string>
+    <string name="no_name">Untitled</string>
+
+    <!-- Empty State -->
+    <string name="no_notes_title">No notes yet</string>
+    <string name="no_notes_subtitle">Tap + or the mic icon to create your first note</string>
+    <string name="create_note">Create Note</string>
+
+    <!-- Loading State -->
+    <string name="loading_notes">Loading your notes…</string>
+
+    <!-- Error State -->
+    <string name="note_not_found_title">Note not found</string>
+    <string name="note_not_found_message">The note you are trying to open via link does not exist or has been deleted (ID: #%1$s).</string>
+    <string name="back_to_all_notes">Back to all notes</string>
+
+    <!-- Edit Screen -->
+    <string name="new_note_title">New note</string>
+    <string name="edit_note_title">Edit note</string>
+    <string name="title_placeholder">Title</string>
+    <string name="content_placeholder">Note text…</string>
+
+    <!-- Content Descriptions (TalkBack Accessibility) -->
+    <string name="cd_search">Search notes</string>
+    <string name="cd_settings">Settings</string>
+    <string name="cd_sort">Sort notes</string>
+    <string name="cd_record_voice">Record voice note</string>
+    <string name="cd_add_note">Add note</string>
+    <string name="cd_back">Navigate back</string>
+    <string name="cd_share">Share note</string>
+
+    <!-- Intents & Errors -->
+    <string name="share_chooser_title">Share note</string>
+    <string name="error_invalid_path">Error: invalid number of path segments</string>
+    <string name="error_invalid_host">Error: broken link (invalid host)</string>
+    <string name="error_empty_id">Error: broken link (ID is missing)</string>
+</resources>
