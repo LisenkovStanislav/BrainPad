@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -34,6 +35,7 @@ import com.brainpad.app.ui.theme.*
 import com.brainpad.app.viewmodel.NotesView
 import java.text.SimpleDateFormat
 import java.util.Date
+
 
 
 @Composable
@@ -85,7 +87,6 @@ fun NotesListScreen(
     val isLoading = state.result is NotesResult.Loading
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -148,51 +149,78 @@ fun NotesListScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        when (val result = state.result) {
-            is NotesResult.Loading -> {
-                LoadingNotesView(
-                    modifier = Modifier
-                        .fillMaxSize()
-                )
-            }
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (val result = state.result) {
+                is NotesResult.Loading -> {
+                    LoadingNotesView(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    )
+                }
 
-            is NotesResult.Empty -> {
-                EmptyNotesContent(
-                    modifier = Modifier
-                        .fillMaxSize()
-                )
-            }
+                is NotesResult.Empty -> {
+                    EmptyNotesContent(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    )
+                }
 
-            is NotesResult.Error -> {
-                NoteNotFoundContent(
-                    noteId = result.notFoundId,
-                    onBackToAllNotesClick = { onAction(NotesAction.ClearError) },
-                    modifier = Modifier
-                        .fillMaxSize()
-                )
-            }
+                is NotesResult.Error -> {
+                    NoteNotFoundContent(
+                        noteId = result.notFoundId,
+                        onBackToAllNotesClick = { onAction(NotesAction.ClearError) },
+                        modifier = Modifier
+                            .fillMaxSize()
+                    )
+                }
 
-            is NotesResult.Content -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    contentPadding = PaddingValues(
-                        horizontal = AppSpacing.screenPadding,
-                        vertical = AppSpacing.xl
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(AppSpacing.xl)
-                ) {
-                    items(
-                        count = result.notes.size,
-                        key = { index -> result.notes[index].id }
-                    ) { index ->
-                        val note = result.notes[index]
-                        NoteCard(
-                            note = note,
-                            onClick = { onAction(NotesAction.OpenNote(note.id)) }
-                        )
+                is NotesResult.Content -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        contentPadding = PaddingValues(
+                            horizontal = AppSpacing.screenPadding,
+                            vertical = AppSpacing.xl
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(AppSpacing.xl)
+                    ) {
+                        items(
+                            count = result.notes.size,
+                            key = { index -> result.notes[index].id }
+                        ) { index ->
+                            val note = result.notes[index]
+                            NoteCard(
+                                note = note,
+                                onClick = { onAction(NotesAction.OpenNote(note.id)) }
+                            )
+                        }
                     }
+                }
+            }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = AppSpacing.sectionSpacing)
+            ) { data ->
+                Surface(
+                    shape = AppShapes.pillButton,
+                    color = androidx.compose.ui.graphics.Color(0xFF2B2B2E),
+                    contentColor = androidx.compose.ui.graphics.Color.White,
+                    shadowElevation = AppSizes.strokeMedium
+                ) {
+                    Text(
+                        text = data.visuals.message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(
+                            horizontal = AppSpacing.cardPadding,
+                            vertical = AppSpacing.l
+                        )
+                    )
                 }
             }
         }
