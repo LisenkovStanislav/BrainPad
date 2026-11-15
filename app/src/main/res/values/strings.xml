@@ -36,4 +36,15 @@
     <string name="error_invalid_path">Error: invalid number of path segments</string>
     <string name="error_invalid_host">Error: broken link (invalid host)</string>
     <string name="error_empty_id">Error: broken link (ID is missing)</string>
+
+    <!-- Detail, Edit & Adaptive Placeholder -->
+    <string name="detail_title">Note details</string>
+    <string name="detail_placeholder">Select a note to view its content</string>
+    <string name="cd_edit_note">Edit note</string>
+    <string name="cd_save_note">Save note</string>
+    <string name="discard_changes_title">Discard unsaved changes?</string>
+    <string name="discard_changes_message">You have unsaved changes. Are you sure you want to leave without saving?</string>
+    <string name="discard_confirm">Discard</string>
+    <string name="discard_cancel">Stay</string>
+    <string name="note_saved_message">Note saved</string>
 </resources>

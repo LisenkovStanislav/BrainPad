@@ -1,11 +1,12 @@
 package com.brainpad.app.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -22,22 +23,38 @@ fun NoteEditScreen(
     initialTitle: String,
     initialContent: String,
     onBackClick: () -> Unit,
-    onShareClick: () -> Unit
+    onSaveClick: (title: String, content: String) -> Unit
 ) {
     var title by rememberSaveable(noteId) { mutableStateOf(initialTitle) }
     var content by rememberSaveable(noteId) { mutableStateOf(initialContent) }
+
+    var showExitDialog by rememberSaveable { mutableStateOf(false) }
+    val hasUnsavedChanges = title != initialTitle || content != initialContent
+
+    BackHandler(enabled = hasUnsavedChanges) {
+        showExitDialog = true
+    }
+
+    val handleBackAttempt = {
+        if (hasUnsavedChanges) {
+            showExitDialog = true
+        } else {
+            onBackClick()
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        if (initialTitle.isEmpty()) stringResource(R.string.new_note_title)
+                        if (initialTitle.isEmpty() && initialContent.isEmpty())
+                            stringResource(R.string.new_note_title)
                         else stringResource(R.string.edit_note_title)
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = handleBackAttempt) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.cd_back)
@@ -45,15 +62,19 @@ fun NoteEditScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onShareClick) {
+                    IconButton(onClick = { onSaveClick(title, content) }) {
                         Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.cd_share)
+                            imageVector = Icons.Default.Check,
+                            contentDescription = stringResource(R.string.cd_save_note)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -84,5 +105,28 @@ fun NoteEditScreen(
                     .defaultMinSize(minHeight = AppSizes.editorMinHeight)
             )
         }
+    }
+
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text(stringResource(R.string.discard_changes_title)) },
+            text = { Text(stringResource(R.string.discard_changes_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showExitDialog = false
+                        onBackClick()
+                    }
+                ) {
+                    Text(stringResource(R.string.discard_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text(stringResource(R.string.discard_cancel))
+                }
+            }
+        )
     }
 }

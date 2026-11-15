@@ -9,13 +9,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import com.brainpad.app.ui.screens.NotesListScreen
-import com.brainpad.app.viewmodel.NotesView
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import com.brainpad.app.ui.screens.NoteEditScreen
-import com.brainpad.app.ui.screens.NoteNotFoundScreen
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.brainpad.app.ui.screens.NotesScreenContainer
 import com.brainpad.app.ui.theme.BrainPadTheme
+import com.brainpad.app.viewmodel.NotesView
 
 class MainActivity : ComponentActivity() {
 
@@ -25,6 +24,7 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: NotesView by viewModels()
 
+    private var pendingDeepLinkNoteId by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,54 +40,13 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-
-            val listNotes by viewModel.notes.collectAsState()
-            val activeNoteId by viewModel.activeNoteId.collectAsState()
-            val isEditing by viewModel.isEditing.collectAsState()
-            val notFoundNoteId by viewModel.notFoundNoteId.collectAsState()
-
-            when {
-                notFoundNoteId != null -> {
-                    BrainPadTheme() {
-                        NoteNotFoundScreen(
-                            noteId = notFoundNoteId!!,
-                            onBackToAllNotesClick = {
-                                viewModel.clearNotFoundError()
-                            }
-                        )
-                    }
-                }
-
-                isEditing -> {
-                    val currentNote = activeNoteId?.let { viewModel.getNoteById(it) }
-
-                    BrainPadTheme() {
-                        NoteEditScreen(
-                            noteId = activeNoteId ?: "",
-                            initialTitle = currentNote?.title.orEmpty(),
-                            initialContent = currentNote?.content.orEmpty(),
-                            onBackClick = {
-                                viewModel.closeNote()
-                            },
-                            onShareClick = {
-                                currentNote?.let { note ->
-                                    shareNote(note.id)
-                                }
-                            }
-                        )
-                    }
-                }
-
-                else -> {
-                    BrainPadTheme() {
-                        NotesListScreen(
-                            notes = listNotes,
-                            onNoteClick = { noteId ->
-                                viewModel.openNote(noteId)
-                            }
-                        )
-                    }
-                }
+            BrainPadTheme {
+                NotesScreenContainer(
+                    viewModel = viewModel,
+                    deepLinkNoteId = pendingDeepLinkNoteId,
+                    onDeepLinkConsumed = { pendingDeepLinkNoteId = null },
+                    onShareNote = { noteId -> shareNote(noteId) }
+                )
             }
         }
     }
@@ -102,15 +61,13 @@ class MainActivity : ComponentActivity() {
     private fun handleDeepLink(intent: Intent?) {
         val data: Uri? = intent?.data ?: return
 
-        if (data!!.scheme == "brainpad") {
-
+        if (data?.scheme == "brainpad") {
             if (data.pathSegments.size != 1) {
                 showErrorToast(getString(R.string.error_invalid_path))
                 return
             }
 
             val requestedId = data.lastPathSegment
-
 
             if (data.host != "note") {
                 showErrorToast(getString(R.string.error_invalid_host))
@@ -122,14 +79,7 @@ class MainActivity : ComponentActivity() {
                 return
             }
 
-            val note = viewModel.getNoteById(requestedId)
-            if (note != null) {
-                viewModel.clearNotFoundError()
-                viewModel.openNote(note.id)
-            } else {
-                viewModel.closeNote()
-                viewModel.showNotFoundError(requestedId)
-            }
+            pendingDeepLinkNoteId = requestedId
         }
     }
 
@@ -172,6 +122,4 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         Log.d(TAG, "onDestroy")
     }
-
-
 }

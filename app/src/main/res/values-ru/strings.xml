@@ -36,4 +36,15 @@
     <string name="error_invalid_path">Ошибка: неверное количество параметров пути</string>
     <string name="error_invalid_host">Ошибка: ссылка повреждена (неправильный хост)</string>
     <string name="error_empty_id">Ошибка: ссылка повреждена (ID не указан)</string>
+
+    <!-- Detail, Edit & Adaptive Placeholder -->
+    <string name="detail_title">Просмотр заметки</string>
+    <string name="detail_placeholder">Выберите заметку для просмотра</string>
+    <string name="cd_edit_note">Редактировать заметку</string>
+    <string name="cd_save_note">Сохранить заметку</string>
+    <string name="discard_changes_title">Выйти без сохранения?</string>
+    <string name="discard_changes_message">У вас есть несохранённые изменения. Вы уверены, что хотите выйти?</string>
+    <string name="discard_confirm">Выйти</string>
+    <string name="discard_cancel">Остаться</string>
+    <string name="note_saved_message">Заметка сохранена</string>
 </resources>
