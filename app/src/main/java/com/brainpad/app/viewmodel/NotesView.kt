@@ -25,7 +25,7 @@ class NotesView(
         private const val KEY_SORT_ASC = "sort_asc"
     }
 
-    private val rawNotes = listOf(
+    private var rawNotes = listOf(
         Note(
             id = "949a5444-46bc-4464-894e-289b57dff8da",
             title = "Note 1",
@@ -82,6 +82,7 @@ class NotesView(
     fun onAction(action: NotesAction) {
         when (action) {
             is NotesAction.OpenNote -> openNote(action.noteId)
+            is NotesAction.SaveNote -> saveNote(action.noteId, action.title, action.content)
             is NotesAction.CloseNote -> closeNote()
             is NotesAction.ToggleSort -> toggleSort()
             is NotesAction.ClearError -> clearNotFoundError()
@@ -103,6 +104,32 @@ class NotesView(
             }
         } else {
             showNotFoundError(id)
+        }
+    }
+
+    fun saveNote(id: String, title: String, content: String) {
+        val mutableList = rawNotes.toMutableList()
+        val index = mutableList.indexOfFirst { it.id == id }
+        val updatedNote = if (index != -1) {
+            mutableList[index].copy(
+                title = title,
+                content = content,
+                timestamp = System.currentTimeMillis()
+            ).also { mutableList[index] = it }
+        } else {
+            Note(id = id, title = title, content = content).also {
+                mutableList.add(0, it)
+            }
+        }
+        rawNotes = mutableList
+
+        _uiState.update { current ->
+            current.copy(
+                activeNote = updatedNote,
+                result = NotesResult.Content(sortNotes(rawNotes, current.isAscendingSort)),
+                // Add to strings.xml
+                userMessage = "Note saved"
+            )
         }
     }
 

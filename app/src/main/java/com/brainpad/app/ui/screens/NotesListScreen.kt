@@ -1,23 +1,30 @@
 package com.brainpad.app.ui.screens
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MicNone
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
+import androidx.compose.material3.adaptive.navigation.BackNavigationBehavior
+import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
+import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -26,26 +33,58 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
 import com.brainpad.app.R
-import com.brainpad.app.model.Note
-import com.brainpad.app.model.NotesAction
-import com.brainpad.app.model.NotesResult
-import com.brainpad.app.model.NotesUiState
+import com.brainpad.app.model.*
 import com.brainpad.app.ui.theme.*
 import com.brainpad.app.viewmodel.NotesView
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.UUID
 
 
+fun NavBackStack<NavKey>.selectNote(id: String) {
+    while (size > 1 && (last() is NoteDetailKey || last() is NoteEditKey)) {
+        removeLastOrNull()
+    }
+    add(NoteDetailKey(id))
+}
 
+
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun NotesScreenContainer(
     viewModel: NotesView,
+    deepLinkNoteId: String? = null,
+    onDeepLinkConsumed: () -> Unit = {},
     onShareNote: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val backStack = rememberNavBackStack(NoteListKey)
+
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val directive = calculatePaneScaffoldDirective(adaptiveInfo).copy(
+        horizontalPartitionSpacerSize = AppSizes.borderThin
+    )
+    val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>(
+        directive = directive,
+        backNavigationBehavior = BackNavigationBehavior.PopLatest
+    )
+
+    LaunchedEffect(deepLinkNoteId) {
+        deepLinkNoteId?.let { targetId ->
+            backStack.selectNote(targetId)
+            onDeepLinkConsumed()
+        }
+    }
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let { message ->
@@ -54,25 +93,114 @@ fun NotesScreenContainer(
         }
     }
 
-    val activeNote = uiState.activeNote
-    if (activeNote != null) {
-        NoteEditScreen(
-            noteId = activeNote.id,
-            initialTitle = activeNote.title,
-            initialContent = activeNote.content,
-            onBackClick = {
-                viewModel.onAction(NotesAction.CloseNote)
-            },
-            onShareClick = {
-                onShareNote(activeNote.id)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        NavDisplay(
+            backStack = backStack,
+            onBack = { backStack.removeLastOrNull() },
+            sceneStrategies = listOf(listDetailStrategy),
+            entryDecorators = listOf(
+                rememberSaveableStateHolderNavEntryDecorator(),
+                rememberViewModelStoreNavEntryDecorator()
+            ),
+            entryProvider = entryProvider {
+                entry<NoteListKey>(
+                    metadata = ListDetailSceneStrategy.listPane(
+                        sceneKey = "notes_scene",
+                        detailPlaceholder = {
+                            DetailPlaceholderView()
+                        }
+                    )
+                ) {
+                    NotesListScreen(
+                        state = uiState,
+                        onAction = { action ->
+                            when (action) {
+                                is NotesAction.OpenNote -> backStack.selectNote(action.noteId)
+                                else -> viewModel.onAction(action)
+                            }
+                        },
+                        onCreateNoteClick = {
+                            val newId = UUID.randomUUID().toString()
+                            backStack.add(NoteEditKey(newId))
+                        },
+                        snackbarHostState = snackbarHostState
+                    )
+                }
+
+                entry<NoteDetailKey>(
+                    metadata = ListDetailSceneStrategy.detailPane(sceneKey = "notes_scene")
+                ) { route ->
+                    val currentNote = (uiState.result as? NotesResult.Content)
+                        ?.notes?.find { it.id == route.noteId }
+                        ?: viewModel.getNoteById(route.noteId)
+
+                    NoteDetailScreen(
+                        noteId = route.noteId,
+                        note = currentNote,
+                        onBackClick = { backStack.removeLastOrNull() },
+                        onEditClick = { id -> backStack.add(NoteEditKey(id)) },
+                        onShareClick = onShareNote
+                    )
+                }
+
+                entry<NoteEditKey> { route ->
+                    val existingNote = (uiState.result as? NotesResult.Content)
+                        ?.notes?.find { it.id == route.noteId }
+                        ?: viewModel.getNoteById(route.noteId)
+
+                    NoteEditScreen(
+                        noteId = route.noteId,
+                        initialTitle = existingNote?.title.orEmpty(),
+                        initialContent = existingNote?.content.orEmpty(),
+                        onBackClick = { backStack.removeLastOrNull() },
+                        onSaveClick = { newTitle, newContent ->
+                            viewModel.onAction(
+                                NotesAction.SaveNote(
+                                    noteId = route.noteId,
+                                    title = newTitle,
+                                    content = newContent
+                                )
+                            )
+                            backStack.removeLastOrNull()
+                            if (backStack.lastOrNull() !is NoteDetailKey) {
+                                backStack.selectNote(route.noteId)
+                            }
+                        }
+                    )
+                }
             }
         )
-    } else {
-        NotesListScreen(
-            state = uiState,
-            onAction = viewModel::onAction,
-            snackbarHostState = snackbarHostState
-        )
+    }
+}
+
+
+@Composable
+fun DetailPlaceholderView() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.m)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Description,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = AppTokens.alphaNotebookLine),
+                modifier = Modifier.size(AppSizes.errorIconCircleSize)
+            )
+            Text(
+                text = stringResource(R.string.detail_placeholder),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -82,6 +210,7 @@ fun NotesScreenContainer(
 fun NotesListScreen(
     state: NotesUiState,
     onAction: (NotesAction) -> Unit,
+    onCreateNoteClick: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
     val isLoading = state.result is NotesResult.Loading
@@ -96,7 +225,7 @@ fun NotesListScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { /*TODO*/ }) {
+                    IconButton(onClick = { /* Поиск */ }) {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = stringResource(R.string.cd_search)
@@ -121,7 +250,7 @@ fun NotesListScreen(
                     verticalArrangement = Arrangement.spacedBy(AppSpacing.xl)
                 ) {
                     SmallFloatingActionButton(
-                        onClick = { /*TODO*/ },
+                        onClick = { /* Запись голоса */ },
                         modifier = Modifier.size(AppSizes.fabSmallSize),
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -133,7 +262,7 @@ fun NotesListScreen(
                         )
                     }
                     FloatingActionButton(
-                        onClick = { /*TODO*/ },
+                        onClick = onCreateNoteClick,
                         modifier = Modifier.size(AppSizes.fabPrimarySize),
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -152,16 +281,13 @@ fun NotesListScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             when (val result = state.result) {
                 is NotesResult.Loading -> {
-                    LoadingNotesView(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    )
+                    LoadingNotesView(modifier = Modifier.fillMaxSize())
                 }
 
                 is NotesResult.Empty -> {
                     EmptyNotesContent(
-                        modifier = Modifier
-                            .fillMaxSize()
+                        onCreateNoteClick = onCreateNoteClick,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
 
@@ -169,8 +295,7 @@ fun NotesListScreen(
                     NoteNotFoundContent(
                         noteId = result.notFoundId,
                         onBackToAllNotesClick = { onAction(NotesAction.ClearError) },
-                        modifier = Modifier
-                            .fillMaxSize()
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
 
@@ -208,8 +333,8 @@ fun NotesListScreen(
             ) { data ->
                 Surface(
                     shape = AppShapes.pillButton,
-                    color = androidx.compose.ui.graphics.Color(0xFF2B2B2E),
-                    contentColor = androidx.compose.ui.graphics.Color.White,
+                    color = Color(0xFF2B2B2E),
+                    contentColor = Color.White,
                     shadowElevation = AppSizes.strokeMedium
                 ) {
                     Text(
@@ -229,6 +354,7 @@ fun NotesListScreen(
 
 @Composable
 fun EmptyNotesContent(
+    onCreateNoteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -341,7 +467,7 @@ fun EmptyNotesContent(
         )
         Spacer(modifier = Modifier.height(AppSpacing.sectionSpacing))
         Button(
-            onClick = { },
+            onClick = onCreateNoteClick,
             modifier = Modifier.height(AppSizes.touchTargetMin),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -364,13 +490,14 @@ fun EmptyNotesContent(
     }
 }
 
-@SuppressLint("NonObservableLocale")
 @Composable
 fun NoteCard(
     note: Note,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val locale = LocalConfiguration.current.locales[0]
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -407,7 +534,6 @@ fun NoteCard(
                     shape = AppShapes.dateBadge,
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 ) {
-                    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
                     Text(
                         text = SimpleDateFormat("MMM d", locale).format(Date(note.timestamp)),
                         style = MaterialTheme.typography.labelMedium,
@@ -433,7 +559,7 @@ fun NoteCard(
 }
 
 
-@Preview(showBackground = true, name = "1. Content State (Список заметок)")
+@Preview(showBackground = true, name = "1. Content State")
 @Composable
 private fun NotesListScreenContentPreview() {
     BrainPadTheme(dynamicColor = false) {
@@ -441,16 +567,8 @@ private fun NotesListScreenContentPreview() {
             state = NotesUiState(
                 result = NotesResult.Content(
                     notes = listOf(
-                        Note(
-                            id = "1",
-                            title = "Design sync",
-                            content = "Simplify onboarding to three steps. Maya to explore a shorter welcome flow."
-                        ),
-                        Note(
-                            id = "2",
-                            title = "Weekend reset",
-                            content = "Pick up coffee beans, repot the monstera, and leave Sunday morning unplanned."
-                        )
+                        Note(id = "1", title = "Design sync", content = "Simplify onboarding to three steps."),
+                        Note(id = "2", title = "Weekend reset", content = "Pick up coffee beans, repot the monstera.")
                     )
                 )
             ),
@@ -459,7 +577,7 @@ private fun NotesListScreenContentPreview() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Empty State (Пустой экран)")
+@Preview(showBackground = true, name = "2. Empty State")
 @Composable
 private fun NotesListScreenEmptyPreview() {
     BrainPadTheme(dynamicColor = false) {
@@ -470,7 +588,7 @@ private fun NotesListScreenEmptyPreview() {
     }
 }
 
-@Preview(showBackground = true, name = "3. Error State (Заметка не найдена)")
+@Preview(showBackground = true, name = "3. Error State")
 @Composable
 private fun NotesListScreenErrorPreview() {
     BrainPadTheme(dynamicColor = false) {
@@ -481,7 +599,7 @@ private fun NotesListScreenErrorPreview() {
     }
 }
 
-@Preview(showBackground = true, name = "4. Loading State (Загрузка)")
+@Preview(showBackground = true, name = "4. Loading State")
 @Composable
 private fun NotesListScreenLoadingPreview() {
     BrainPadTheme(dynamicColor = false) {

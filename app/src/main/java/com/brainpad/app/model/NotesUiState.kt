@@ -1,5 +1,7 @@
 package com.brainpad.app.model
 
+import android.icu.text.CaseMap
+
 
 data class NotesUiState(
     val result: NotesResult = NotesResult.Loading,
@@ -19,6 +21,7 @@ sealed interface NotesResult {
 
 sealed interface NotesAction {
     data class OpenNote(val noteId: String) : NotesAction
+    data class SaveNote(val noteId: String, val title: String, val content: String) : NotesAction
     data object CloseNote : NotesAction
     data object ToggleSort : NotesAction
     data object ClearError : NotesAction
