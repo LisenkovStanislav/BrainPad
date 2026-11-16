@@ -34,6 +34,7 @@ fun NoteDetailScreen(
         contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.End),
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical + WindowInsetsSides.End),
                 title = {
                     Text(
                         text = stringResource(R.string.detail_title),
